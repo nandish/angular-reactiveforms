@@ -6,8 +6,14 @@ import {
   AbstractControl,
   ValidatorFn,
 } from '@angular/forms';
+import { debounceTime } from 'rxjs/operators';
 
 import { Customer } from './customer';
+
+interface ValidationMessages {
+  required: string;
+  email: string;
+}
 
 function emailMatcher(c: AbstractControl): { [key: string]: boolean } | null {
   const emailControl = c.get('email');
@@ -38,6 +44,13 @@ export class CustomerComponent implements OnInit {
   customerForm!: FormGroup;
   customer = new Customer();
 
+  emailMessage: string = '';
+
+  private validationMessages: ValidationMessages = {
+    required: 'Please enter your email address',
+    email: 'Please enter a valid email address',
+  };
+
   constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
@@ -49,13 +62,33 @@ export class CustomerComponent implements OnInit {
           email: ['', [Validators.required, Validators.email]],
           confirmEmail: ['', Validators.required],
         },
-        { validator: emailMatcher }
+        { validators: [emailMatcher] }
       ),
       phone: '',
       notification: 'email',
       rating: [null, ratingRange(1, 5)],
       sendCatalog: true,
     });
+
+    this.customerForm
+      .get('notification')
+      ?.valueChanges.subscribe((value) => this.setNotification(value));
+
+    const emailControl = this.customerForm.get('emailGroup.email');
+    emailControl?.valueChanges.pipe(
+      debounceTime(1000)
+    ).subscribe((value) =>
+      this.setMessage(emailControl)
+    );
+  }
+
+  setMessage(c: AbstractControl): void {
+    this.emailMessage = '';
+    if ((c.touched || c.dirty) && c.errors) {
+      this.emailMessage = Object.keys(c.errors)
+        .map((key) => this.validationMessages[key as keyof ValidationMessages])
+        .join(' ');
+    }
   }
 
   save(): void {
@@ -72,7 +105,7 @@ export class CustomerComponent implements OnInit {
     }
 
     phoneControl?.updateValueAndValidity();
-    console.log(this.customerForm);
+    //console.log(this.customerForm);
   }
 
   populateTestData(): void {
@@ -80,7 +113,7 @@ export class CustomerComponent implements OnInit {
       firstName: 'Jack',
       lastName: 'Harkness',
       emailGroup: {
-        email: 'Jack@torchwood.com',
+        email: 'jack@torchwood.com',
       },
       sendCatalog: false,
     });
