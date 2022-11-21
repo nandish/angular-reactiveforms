@@ -5,6 +5,7 @@ import {
   Validators,
   AbstractControl,
   ValidatorFn,
+  FormArray
 } from '@angular/forms';
 import { debounceTime } from 'rxjs/operators';
 
@@ -51,7 +52,11 @@ export class CustomerComponent implements OnInit {
     email: 'Please enter a valid email address',
   };
 
-  constructor(private fb: FormBuilder) {}
+  get addresses(): FormArray {
+    return <FormArray>this.customerForm.get('addresses');
+  }
+
+  constructor(private fb: FormBuilder) { }
 
   ngOnInit(): void {
     this.customerForm = this.fb.group({
@@ -68,6 +73,8 @@ export class CustomerComponent implements OnInit {
       notification: 'email',
       rating: [null, ratingRange(1, 5)],
       sendCatalog: true,
+
+      addresses: this.fb.array([this.buildAddress()])
     });
 
     this.customerForm
@@ -82,6 +89,17 @@ export class CustomerComponent implements OnInit {
     );
   }
 
+  buildAddress(): FormGroup {
+    return this.fb.group({
+      addressType: 'home',
+      street1: '',
+      street2: '',
+      city: '',
+      state: '',
+      zip: ''
+    });
+  }
+
   setMessage(c: AbstractControl): void {
     this.emailMessage = '';
     if ((c.touched || c.dirty) && c.errors) {
@@ -94,6 +112,10 @@ export class CustomerComponent implements OnInit {
   save(): void {
     console.log(this.customerForm);
     console.log('Saved: ' + JSON.stringify(this.customerForm.value));
+  }
+
+  addAddress(): void {
+    this.addresses.push(this.buildAddress());
   }
 
   setNotification(notifyVia: string): void {
